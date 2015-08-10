@@ -1,0 +1,356 @@
+
+<!DOCTYPE html>
+<html>
+ <head>
+	<title>autoencoder</title>
+	<meta name="description" content="">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<!-- D3.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js"></script>
+  <!-- jQuery -->  
+ 
+  <!-- Plotly.js -->   
+  <script src="https://d14fo0winaifog.cloudfront.net/plotly-basic.js"></script>
+  <script type="text/javascript" src="js/jquery.js"></script>
+
+
+ </head>
+<body>
+ <h1>AUTOENCODER</h1>
+ 
+ <canvas id = "mycanvas" width = "200" height = "200" style = "border: 2px solid #000000;">
+    </canvas>
+    <canvas id = "mycanvas1" width = "200" height = "200" style = "border: 2px solid #000000;">
+    </canvas>
+ <div id="myDiv1" style="width:600px;height:400px;"></div>
+ 
+
+
+<script type="text/javascript">
+function matrix(){
+
+    this.init = function(y, x){
+        var M = new Array(y);
+        for (var k = 0; k < y ; k ++)
+        	M[k] = new Array(x);
+        return M ;
+     }
+}
+
+matrix.prototype.zeros = function(y, x){
+    	var M = this.init(y, x);
+  	    for(var i = 0; i < y; i++){
+	        for(var j = 0; j < x; j++)
+	            M[i][j] = 0; 
+        } 
+        return M ;  
+    } 
+
+matrix.prototype.random = function(y, x){
+    	var M = this.init(y, x);
+  	    for(var i = 0; i < y; i++){
+	        for(var j = 0; j < x; j++)
+	            M[i][j] = Math.random(); 
+        } 
+        return M ;  
+    }  
+
+matrix.prototype.dot = function(A, B){
+	if (B[0].length === undefined)
+		var l = 1;
+	else
+		var l = B[0].length;
+    if (A[0].length === undefined)
+		var r = 1;
+	else
+        var r = A[0].length;
+	var C = this.zeros(A.length, l);
+	for(var i = 0; i < A.length;i ++){
+		for(var j = 0; j < l;j ++){
+			for(var s = 0; s < r;s ++){
+				
+                C[i][j] += A[i][s] * B[s][j];
+
+            }
+        }
+    }
+    return C;
+}
+
+matrix.prototype.add = function(A, B){
+
+	if (B[0].length === undefined)
+		var l = 1;
+	else
+		var l = B[0].length;
+    if (A[0].length === undefined)
+		var r = 1;
+	else
+        var r = A[0].length;
+
+	if(A.length <= B.length)
+		var s = B.length;
+	else
+		var s = A.length;
+	if(r <= l)
+		var d = l;
+	else 
+		var d = r;
+    var C = this.zeros(s, d);
+	for (var i = 0;i < s;i++){
+		for(var j = 0;j < d;j++){
+			if(A[i] !== undefined){
+				if(A[i][j]!== undefined)
+				C[i][j] += A[i][j];
+		     }
+			if(B[i]!== undefined){
+				if(B[i][j]!== undefined)
+				C[i][j] += B[i][j];
+		     }
+		} 
+	}
+    return C;   
+}
+
+matrix.prototype.sigmoid = function(A){
+
+	if (A[0].length === undefined)
+		var l = 1;
+	else
+		var l = A[0].length;
+    
+    var C = this.zeros(A.length, l);
+	for (var i = 0;i < A.length;i++){
+		for(var j = 0;j < l;j++){
+			C[i][j] = 1 / (1 + Math.exp(A[i][j]));
+		} 
+	}
+    return C;   
+}
+
+matrix.prototype.transpose = function(A){
+	if (A[0].length === undefined)
+		var l = 1;
+	else
+		var l = A[0].length;
+    
+    var C = this.zeros(l, A.length);
+	for (var i = 0;i < A.length;i++){
+		for(var j = 0;j < l;j++){
+			C[j][i] = A[i][j];          																																																																																																																																																																																																																																																																																				
+		} 
+	}
+    return C;   
+}
+var newM = new matrix();
+
+
+function dA(input, n_hidden){
+	 this.input = input;
+     var n_visible = input[0].length
+     this.n_visible = n_visible;
+     this.n_hidden = n_hidden;
+     this.W = newM.random(n_visible, n_hidden);
+     this.b1 = newM.zeros(1, n_hidden);
+     this.b2 = newM.zeros(1, n_visible);
+     
+     this.qq = 20;
+}
+
+dA.prototype.get_corrupted_input = function(input,corruption_level){
+	    
+    
+    var C = newM.zeros(input.length, input[0].length);
+
+        for(var i = 0; i < input[0].length;i++){
+               if (Math.random() > corruption_level)
+
+               	   C[0][i] = input[0][i];
+        }
+
+    return C;
+
+}
+dA.prototype.get_hidden_input = function(input) {
+	return newM.sigmoid(newM.add(newM.dot(input, this.W), this.b1));
+}
+
+dA.prototype.get_reconstructed_input = function(hidden){
+	return newM.sigmoid(newM.add(newM.dot(hidden, newM.transpose(this.W)), this.b2));
+}
+
+dA.prototype.get_cost_updates = function(corruption_level, learning_rate){
+    var cost = 10000;
+    var plot = newM.zeros(2,100);
+    var ygraph = [[]];
+    for (var k = 0; k < 100; k++) {
+    
+    new_x = this.get_corrupted_input(this.input,corruption_level);
+    hidden_value = this.get_hidden_input(new_x);
+    
+    y = this.get_reconstructed_input(hidden_value);
+    
+    
+     cost = 0;
+
+    for (var i = 0 ; i < y[0].length; i ++){
+    	cost += -(this.input[0][i] * Math.log(y[0][i]) + (1 - this.input[0][i]) * Math.log( 1 - y[0][i]));
+    	 
+    }
+    cost = cost / y.length;
+
+
+    if ( grad_w === undefined)
+         var grad_w = newM.zeros(this.n_visible, this.n_hidden);;
+    if ( grad_b1 === undefined)
+         var grad_b1 = [];
+
+     if ( grad_b2 === undefined)
+         var grad_b2 = [];
+    var c = 0;
+
+   
+
+    for (var i = 0 ; i < y[0].length; i ++){
+   	for (var j = 0 ; j < this.n_hidden; j ++){
+            grad_w[i][j] += ((hidden_value[0][j] + (1 - hidden_value[0][j]) * (this.input[0][i]) * this.W[i][j] )* (this.input[0][i] - y[0][i] )) / y[0].length;
+    	}
+    }
+    
+    for (var i = 0 ; i < this.n_hidden; i ++){
+     	grad_b1[i] = grad_w[i][j] += ((hidden_value[0][j] + (1 - hidden_value[0][j])  * this.W[i][j] )* (this.input[0][i] - y[0][i] )) / y[0].length;
+    }
+
+    for (var i = 0 ; i < y[0].length; i ++){
+     	grad_b2[i] = (this.input[0][i] - y[0][i]) / y[0].length;
+    }
+    
+    for (var i = 0 ; i < this.n_visible; i ++){
+   	for (var j = 0 ; j < this.n_hidden; j ++){
+   		this.W[i][j] += - 1* grad_w[i][j];
+   	}
+   }
+   
+   for (var i = 0 ; i < y[0].length; i ++){
+   	this.b2[0][i] == - 1*grad_b2[i] ;
+   }
+   
+   for (var i = 0 ; i < this.n_hidden; i ++){
+   	this.b2[0][i] == - 1*grad_b1[i] ;
+   }
+
+   
+   ygraph[k] = y[0];
+   
+   plot[0][k] = k;
+   plot[1][k] = cost ;
+   }
+   console.log(ygraph[99]);
+   
+       return [cost, plot, ygraph];
+
+
+}
+var A = [[1],[0],[1],[1],[1],[0],[1],[0],[1],[0],[0],[1],[1],[0],[0],[1],[1],[1],[1],[1],[1],[1],[1],[1],[1],[1],[1],[1],[1],[1],[1],[1],[0],[1],[0],[1],[1],[1],[0],[1],[0],[0],[0],[0],[0],[0],[1],[0],[0],[0],[1],[0],[1],[1],[1],[0],[1],[0],[1],[0],[0],[1],[1],[0],[0],[1],[1],[1],[1],[1],[1],[1],[1],[1],[0],[1],[1],[1],[0],[1],[1],[1],[1],[1],[1],[1],[1],[1],[1],[1],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0]];
+    A1 = newM.transpose(A);
+
+    var F = new dA(A1,10);
+
+    X = F.get_cost_updates(0.3,1);
+  
+
+  var trace2 = {
+  x: [], 
+  y: [], 
+  mode: "lines+markers", 
+  type: "scatter"
+ 
+  };
+
+  var layout = {
+     title: "Cost Entropy",
+     xaxis: {range: [-5, 100]},
+     yaxis: {range: [-5, 100]}
+  };
+var data1 = [trace2];
+
+
+Plotly.plot("myDiv1", data1,layout);
+var point = 0;
+var cal;
+
+function plot1(){
+  if(point >= X[1][0].length - 2)
+    clearInterval(cal);
+  trace2.x.push(X[1][0][point]);
+  trace2.y.push(X[1][1][point]);
+  point++;
+  Plotly.redraw("myDiv1");
+  draw_output(X[2], point);
+  }
+
+function plot(){
+ cal = setInterval("plot1()", 50);
+}
+plot();
+
+var canvas = document.getElementById("mycanvas");
+var ctx = canvas.getContext("2d");
+var canvas1 = document.getElementById("mycanvas1");
+var ctx1 = canvas1.getContext("2d");
+var irr = 0;
+function draw_origin(){
+         ctx.clearRect(0, 0, canvas.width, canvas.height);
+          for (var y = 0; y < 10; y++) {
+            for (var x = 0; x < 10; x++) {
+              var block = ctx.getImageData(x * 20, y * 20, 20, 20);
+              var newVal =  255*A[10*y + x];
+              for (var i = 0; i < 4 * 20 * 20; i+=4) {
+                block.data[i] = newVal;
+                block.data[i+1] = newVal;
+                block.data[i+2] = newVal;
+                block.data[i+3] = 255;
+              }
+              ctx.putImageData(block, x * 20, y * 20);
+
+            }
+          }
+     
+}
+draw_origin();
+function draw_output(data, point){
+         ctx1.clearRect(0, 0, canvas.width, canvas.height);
+          for (var y = 0; y < 10; y++) {
+            for (var x = 0; x < 10; x++) {
+              var block = ctx1.getImageData(x * 20, y * 20, 20, 20);
+              var newVal =  255* data[point][10*y + x];
+              for (var i = 0; i < 4 * 20 * 20; i+=4) {
+                block.data[i] = newVal;
+                block.data[i+1] = newVal;
+                block.data[i+2] = newVal;
+                block.data[i+3] = 255;
+              }
+              ctx1.putImageData(block, x * 20, y * 20);
+
+            }
+          }
+        }
+
+
+document.write(JSON.stringify(A1[0].length));
+document.write(JSON.stringify(X[2]));
+
+
+
+
+
+
+
+
+
+
+</script>
+
+
+</body>
+</html>
