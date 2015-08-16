@@ -122,7 +122,7 @@ matrix.prototype.sigmoid = function(A){
     var C = this.zeros(A.length, l);
 	for (var i = 0;i < A.length;i++){
 		for(var j = 0;j < l;j++){
-			C[i][j] = 1 / (1 + Math.exp(A[i][j]));
+			C[i][j] = 1 / (1 + Math.exp(-1* A[i][j]));
 		} 
 	}
     return C;   
@@ -213,16 +213,16 @@ dA.prototype.get_cost_updates = function(corruption_level, learning_rate){
 
     for (var i = 0 ; i < y[0].length; i ++){
    	for (var j = 0 ; j < this.n_hidden; j ++){
-            grad_w[i][j] += ((hidden_value[0][j] + (1 - hidden_value[0][j]) * (this.input[0][i]) * this.W[i][j] )* (this.input[0][i] - y[0][i] )) / y[0].length;
+            grad_w[i][j] += -((hidden_value[0][j] + (1 - hidden_value[0][j]) * (this.input[0][i]) * this.W[i][j] )* (this.input[0][i] - y[0][i] )) / y[0].length;
     	}
     }
     
     for (var i = 0 ; i < this.n_hidden; i ++){
-     	grad_b1[i] = grad_w[i][j] += ((hidden_value[0][j] + (1 - hidden_value[0][j])  * this.W[i][j] )* (this.input[0][i] - y[0][i] )) / y[0].length;
+     	grad_b1[i] =  -((hidden_value[0][j] + (1 - hidden_value[0][j])  * this.W[i][j] )* (this.input[0][i] - y[0][i] )) / y[0].length;
     }
 
     for (var i = 0 ; i < y[0].length; i ++){
-     	grad_b2[i] = (this.input[0][i] - y[0][i]) / y[0].length;
+     	grad_b2[i] = -(this.input[0][i] - y[0][i]) / y[0].length;
     }
     
     for (var i = 0 ; i < this.n_visible; i ++){
@@ -245,7 +245,7 @@ dA.prototype.get_cost_updates = function(corruption_level, learning_rate){
    plot[0][k] = k;
    plot[1][k] = cost ;
    }
-   console.log(ygraph[99]);
+   
    
        return [cost, plot, ygraph];
 
@@ -270,7 +270,7 @@ var A = [[1],[0],[1],[1],[1],[0],[1],[0],[1],[0],[0],[1],[1],[0],[0],[1],[1],[1]
   var layout = {
      title: "Cost Entropy",
      xaxis: {range: [-5, 100]},
-     yaxis: {range: [-5, 100]}
+     yaxis: {range: [-5, 200]}
   };
 var data1 = [trace2];
 
@@ -339,12 +339,6 @@ function draw_output(data, point){
 
 document.write(JSON.stringify(A1[0].length));
 document.write(JSON.stringify(X[2]));
-
-
-
-
-
-
 
 
 
